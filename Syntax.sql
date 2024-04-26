@@ -2,24 +2,19 @@
 SELECT *
 FROM code_list
 ;
-
-/* There are 139 DISTINCT offense_codes w/ related offense_description in the master_code_list table */
-/* DISTINCT Offense_Codes */
-SELECT COUNT(DISTINCT offense_code) AS CodeCount
-	,COUNT(DISTINCT offense_description) AS DescriptionCount
-FROM police_incidents
-;
-
-/* Looks like there are way more distinct counts of Offense_Descriptions than Offense_Codes. 
-   We will join the master code list to the police_incident table on offense_code. */ 
-SELECT COUNT(DISTINCT offense_code) AS CodeCount
-	,COUNT(DISTINCT offense_description) AS DescriptionCount
-FROM (
-		SELECT i.offense_code, c.description AS offense_description
-		FROM police_incidents AS i
-		JOIN code_list c
-		ON i.offense_code = c.offense_code
-	 ) a
+/* Look for discrempancies in the police incident data. */
+SELECT i.offense_code
+	,c.code
+	,i.offense_code = c.code AS code_flag
+	,c.description
+	,i.offense_description
+	,i.offense_description = c.description AS desc_flag
+	,COUNT(*) AS TotNum
+FROM police_incidents AS i
+JOIN code_list AS c
+ON i.offense_code = c.code
+GROUP BY 1,2,4,5
+ORDER BY 1,6 DESC
 ;
 
 /* Create a view */
