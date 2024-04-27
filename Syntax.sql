@@ -91,3 +91,15 @@ FROM (
 WHERE row_number = 1
 ORDER BY 2 DESC
 ;
+
+/* Police incidents in last 7 days */
+SELECT code
+	,initcap(desdcription) AS description
+	,COUNT(*) AS TotalCount
+	,MIN(DATE(date_occurred)) AS startDate
+	,CURRENT_DATE AS endDate
+FROM v_incident_clean
+WHERE DATE(date_occurred) >= CURRENT_DATE - INTERVAL '7 days'
+GROUP BY 1,2
+ORDER BY 3 DESC
+;
