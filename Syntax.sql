@@ -17,21 +17,11 @@ GROUP BY 1,2,4,5
 ORDER BY 1,6 DESC
 ;
 
-/* Create a view */
-CREATE view v_incident_clean
-AS
-SELECT *
-	,date_part('year', date_occurred) AS year
-FROM police_incidents AS i
-JOIN code_list c
-ON i.offense_code = c.code
-;
-
 /* Top 10 Police Incidents by Count */
 SELECT offense_code
 	,offense_description
 	,COUNT(*) AS TotalCount
-FROM v_incident_clean
+FROM incidents_clean
 GROUP BY 1,2
 ORDER BY 3 DESC
 LIMIT 10
@@ -42,7 +32,7 @@ SELECT year::TEXT
 	,code
 	,initcap(description) AS description
 	,COUNT(*) AS totalcount
-FROM v_incident_clean
+FROM incidents_clean
 WHERE description IN (SELECT description
 					  FROM v_incident_clean
 					  GROUP BY 1
@@ -59,7 +49,7 @@ FROM (
 			,code
 			,initcap(description) AS description
 			,ROW_NUMBER() OVER (PARTITION BY DATE(date_occurred) ORDER BY COUNT(*) DESC) AS row_number
-		FROM v_incident_clean
+		FROM incidents_clean
 		WHERE description IN (SELECT description
 					  		FROM v_incident_clean
 					  		GROUP BY 1
@@ -79,7 +69,7 @@ FROM (
 			,code
 			,initcap(description) AS description
 			,ROW_NUMBER() OVER (PARTITION BY DATE(date_occurred) ORDER BY COUNT(*) DESC) AS row_number
-		FROM v_incident_clean
+		FROM incidents_clean
 		WHERE description IN (SELECT description
 							  FROM v_incident_clean
 							  GROUP BY 1
@@ -98,8 +88,39 @@ SELECT code
 	,COUNT(*) AS TotalCount
 	,MIN(DATE(date_occurred)) AS startDate
 	,CURRENT_DATE AS endDate
-FROM v_incident_clean
+FROM incidents_clean
 WHERE DATE(date_occurred) >= CURRENT_DATE - INTERVAL '7 days'
 GROUP BY 1,2
+ORDER BY 3 DESC
+;
+
+/* Police Incidents by month, dayofweek, and timegroup */
+SELECT code
+	,description
+	,EXTRACT(month FRoM date_occurred) AS month
+	,dayofweek
+	,timegroups
+	,COUNT(*) AS totalcount
+FROM incidents_clean
+GROUP BY 1,2,3,4,5
+ORDER BY 6 DESC
+;
+
+/* Police incidents days since latest */
+SELECT code
+	,description
+	,EXTRACT('days' FROM CURRENT_TIMESTAMP - latest) AS days_since_latest
+	,DATE(latest) AS latest
+	,EXTRACT('days' FROM AVG(gap)) AS avg_gap
+	,EXTRACT('days' FROM MAX(gap)) AS max_gap
+FROM (
+	SELECT code
+		,description 
+		,LEAD(date_occurred) OVER (PARTITION BY description ORDER BY date_occurred) AS next_time
+		,LEAD(date_occurred) OVER (PARTITION BY description ORDER BY date_occurred) - date_occurred AS gap
+		,MAX(date_occurred) OVER (PARTITION BY description) AS latest
+	FROM incidents_clean
+)
+GROUP BY 1,2,3,4
 ORDER BY 3 DESC
 ;
